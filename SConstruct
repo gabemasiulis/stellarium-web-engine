@@ -92,7 +92,7 @@ for fname in ['alpha_processing', 'dec', 'filters', 'lossless', 'rescaler',
 env.Append(CPPPATH=['ext_src/webp'])
 env.Append(CPPPATH=['ext_src/webp/src'])
 
-sources = ['build/%s' % x for x in sources]
+sources = ['build/%s' % x for x in sorted(sources)]
 
 if not env.GetOption('clean'):
     assert(os.environ['EMSCRIPTEN_TOOL_PATH'])
