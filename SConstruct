@@ -112,8 +112,6 @@ extra_exported = [
     'ALLOC_NORMAL',
     'GL',
     'UTF8ToString',
-    '_free',
-    '_malloc',
     'addFunction',
     'allocate',
     'ccall',
@@ -142,8 +140,8 @@ flags = [
          '-O3',
          '-s', 'USE_WEBGL2=1',
          '-s', 'NO_EXIT_RUNTIME=1',
-         '-s', '"EXPORTED_FUNCTIONS=[]"',
-         '-s', '"EXTRA_EXPORTED_RUNTIME_METHODS=[%s]"' % extra_exported,
+         '-s', '"EXPORTED_FUNCTIONS=[_free,_malloc]"',
+         '-s', '"EXPORTED_RUNTIME_METHODS=[%s]"' % extra_exported,
          '-s', 'FILESYSTEM=0'
         ]
 
@@ -161,10 +159,10 @@ if env['mode'] == 'debug':
               '-s', 'WARN_UNALIGNED=1']
 
 if env['es6']:
-    flags += ['-s', 'EXPORT_ES6=1', '-s', 'USE_ES6_IMPORT_META=0']
+    flags += ['-s', 'EXPORT_ES6=1']
 
-env.Append(CCFLAGS=['-DNO_ARGP', '-DGLES2 1'] + flags)
-env.Append(LINKFLAGS=flags)
+env.Append(CCFLAGS=['-DNO_ARGP', '-DGLES2 1', '-O3', '-Wno-deprecated-non-prototype', '-Wno-unused-but-set-variable', '-Wno-unused-variable'])
+env.Append(LINKFLAGS=['-O3'] + flags)
 env.Append(LIBS=['GL'])
 
 prog = env.Program(target='build/stellarium-web-engine.js', source=sources)
