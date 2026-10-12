@@ -18,14 +18,28 @@ Module.afterInit(function() {
   // Function called at each frame
   var render = function(timestamp) {
 
+    var canvas = Module.canvas;
+
+    // --- Nocturne adaptive render gate (patch, ADR 0002) ------------------
+    // Idle at ~12 fps; pages may request a full-rate burst (e.g. during a
+    // time-travel transition) via:
+    //   canvas.__nocturne = { burst: <performance.now() epoch> }
+    // While the document is hidden, do not render at all.
+    var t = performance.now();
+    var burstUntil = (canvas.__nocturne && canvas.__nocturne.burst) || 0;
+    if (document.hidden || (t >= burstUntil && t - (render.__last || 0) < 83)) {
+      window.requestAnimationFrame(render);
+      return;
+    }
+    render.__last = t;
+    // ---------------------------------------------------------------------
+
     if (mouseDown)
       Module._core_on_mouse(0, 1, mousePos.x, mousePos.y, mouseButtons);
 
-    // Check for canvas resize
-    var canvas = Module.canvas;
-
     // Get the device pixel ratio, falling back to 1.
-    var dpr = window.devicePixelRatio || 1;
+    // Nocturne (patch, ADR 0002): cap at 2 to bound fill cost on dense displays.
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
 
     // Get the size of the canvas in CSS pixels.
     var rect = canvas.getBoundingClientRect();
