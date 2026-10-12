@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>gltest</title></head>
+<body style="margin:0;background:#111;color:#0f0;font:16px monospace">
+<pre id="out">RUNNING...</pre>
+<script>
+function log(s){ document.getElementById('out').textContent += "\n"+s; }
+try {
+  var c = document.createElement('canvas');
+  c.width = 400; c.height = 300; c.style.cssText="width:400px;height:300px;display:block;background:#001";
+  document.body.appendChild(c);
+  var gl = c.getContext('webgl') || c.getContext('experimental-webgl');
+  if (!gl) { log("WEBGL: NOT AVAILABLE"); throw new Error("no webgl"); }
+  log("WEBGL: OK  "+gl.getParameter(gl.VERSION)+" / "+gl.getParameter(gl.VENDOR));
+  // draw a colored triangle to force the pipeline
+  var vs = "attribute vec2 p; void main(){ gl_Position=vec4(p,0,1);}";
+  var fs = "precision mediump float; void main(){ gl_FragColor=vec4(0,0.8,0.4,1);}";
+  function sh(t,s){var o=gl.createShader(t);gl.shaderSource(o,s);gl.compileShader(o);
+    if(!gl.getShaderParameter(o,gl.COMPILE_STATUS))throw new Error(gl.getShaderInfoLog(o));return o;}
+  var pr=gl.createProgram();gl.attachShader(pr,sh(gl.VERTEX_SHADER,vs));gl.attachShader(pr,sh(gl.FRAGMENT_SHADER,fs));
+  gl.linkProgram(pr);
+  if(!gl.getProgramParameter(pr,gl.LINK_STATUS)){log("LINK FAIL "+gl.getProgramInfoLog(pr));throw new Error("link");}
+  gl.useProgram(pr);
+  var b=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,b);
+  gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-0.5,1,-0.5,0,1]),gl.STATIC_DRAW);
+  var loc=gl.getAttribLocation(pr,"p");gl.enableVertexAttribArray(loc);gl.vertexAttribPointer(loc,2,gl.FLOAT,false,0,0);
+  gl.clearColor(0,0,0,1);gl.clear(gl.COLOR_BUFFER_BIT);gl.drawArrays(gl.TRIANGLES,0,3);
+  log("DRAW: OK  (green triangle should show)");
+} catch(e){ log("ERROR: "+e.message); }
+</script>
+</body></html>

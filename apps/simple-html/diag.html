@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<style>html,body{margin:0;height:100%;background:#000}#out{position:fixed;top:0;left:0;color:#0f0;font:14px monospace;z-index:99;background:rgba(0,0,0,.6);padding:6px;max-width:60vw;white-space:pre-wrap}</style>
+</head><body>
+<pre id="out">BOOT</pre>
+<canvas id="c" style="width:100vw;height:100vh;display:block"></canvas>
+<script type="module">
+const log=(m)=>{document.getElementById('out').textContent+='\n'+m;};
+const c=document.getElementById('c');
+c.width=1280;c.height=720;
+let stel=null;
+try{
+  const StelWebEngine=await import('../../build/stellarium-web-engine.js');
+  log('import ok, type '+(typeof StelWebEngine));
+  const factory=StelWebEngine.default||StelWebEngine;
+  log('factory type '+(typeof factory));
+  const ready=new Promise(res=>{
+    const m=factory({
+      wasmFile:'../../build/stellarium-web-engine.wasm',
+      canvas:c,
+      onReady:(s)=>{ log('READY'); stel=s; res(s);}
+    });
+  });
+  const s=await Promise.race([ready, new Promise(r=>setTimeout(()=>{log('TIMEOUT waiting ready');r(null);},20000))]);
+  if(!s){ throw new Error('engine never became ready'); }
+  const core=s.core, obs=s.observer;
+  // St Paul MN
+  obs.latitude=44.9537*s.D2R;
+  obs.longitude=-93.09*s.D2R;
+  obs.elevation=290;
+  // time: 2026 vernal equinox midnight local = 2026-03-20 05:00 UTC
+  obs.utc=s.date2MJD(Date.UTC(2026,2,20,5,0,0));
+  // subtle config
+  core.display_limit_mag=6.0;
+  core.exposure_scale=1.0;
+  core.bortle_index=1;
+  core.time_speed=1;
+  core.fov=1.0597587; // ~60.72 vdeg -> 103 hdeg at 16:9
+  // hide everything but stars+mw
+  for(const k of ['constellations','dso','planets','comets','minorplanets','satellites','labels','cardinal','coordinates','skycultures','lines','dss','landscape','photos','atmosphere','movements']){
+    try{ if(core[k]) core[k].visible=false; }catch(e){}
+  }
+  try{ core.atmosphere.visible=false; }catch(e){}
+  // data
+  core.stars.addDataSource({url:'../test-skydata/stars'});
+  core.milkyway.addDataSource({url:'../test-skydata/surveys/milkyway'});
+  log('observer azalt='+JSON.stringify(obs.azalt));
+  log('utc='+obs.utc+' tt='+obs.tt);
+  // wait a bit for data + frames
+  await new Promise(r=>setTimeout(r,6000));
+  log('after 6s: progressbars='+JSON.stringify(core.progressbars));
+  log('fps='+core.fps);
+  // sample some pixels
+  const ctx2=c.getContext('webgl');
+  if(ctx2){
+    const px=new Uint8Array(4);
+    ctx2.readPixels(640,360,1,1,ctx2.RGBA,ctx2.UNSIGNED_BYTE,px);
+    log('center pixel rgb='+px[0]+','+px[1]+','+px[2]);
+    ctx2.readPixels(100,100,1,1,ctx2.RGBA,ctx2.UNSIGNED_BYTE,px);
+    log('tl pixel rgb='+px[0]+','+px[1]+','+px[2]);
+  }
+  log('DONE');
+}catch(e){ log('ERROR: '+e.message); log(e.stack||''); }
+</script>
+</body></html>
