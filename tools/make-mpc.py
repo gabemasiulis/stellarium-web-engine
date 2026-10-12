@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
 # Stellarium Web Engine - Copyright (c) 2022 - Stellarium Labs SRL
 #

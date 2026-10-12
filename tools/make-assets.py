@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
 # Stellarium Web Engine - Copyright (c) 2022 - Stellarium Labs SRL
 #
@@ -30,7 +30,7 @@ if len(sys.argv) > 1:
     ROOT = sys.argv[1]
     DEST = sys.argv[2]
 
-if os.path.dirname(__file__) != "./tools":
+if os.path.basename(os.path.dirname(os.path.abspath(__file__))) != "tools":
     print("Should be run from root directory")
     sys.exit(-1)
 
