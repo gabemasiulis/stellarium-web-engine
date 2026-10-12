@@ -32,6 +32,14 @@ Run `git log master..heimdall` for the full list. In summary:
 4. **Diagnostic pages** (`apps/simple-html/diag.html`, `gltest.html`).
 5. **Sorted link order** (`SConstruct`): makes the `.wasm` file
    independent of the filesystem that holds the tree.
+6. **Copy downloaded data** (`src/utils/request_js.c`): fixes a
+   use-after-free that Emscripten 4 caused. The engine called
+   `emscripten_async_wget2_data(..., free=false, ...)` and kept the
+   downloaded buffer, but the Emscripten 4 glue ignores `free` and frees
+   the buffer when `onload` returns. Star and Milky Way tiles were then read
+   from freed memory: `eph_load` errors at `eph-file.c` lines 112 and 122,
+   "Cannot uncompress data", and almost no stars. `onload` now copies the
+   data.
 
 ## Build the engine
 
@@ -46,6 +54,18 @@ The script runs `make js-es6` (`emscons scons mode=release es6=1`) in the
 pinned dev shell, writes `build/stellarium-web-engine.{js,wasm}` and prints
 their SHA-256 sums. The first build fills the emscripten cache in
 `~/.cache/nocturne-emscripten` and takes longer.
+
+## Smoke test
+
+```sh
+heimdall/smoke-test.sh smoke.png
+```
+
+The script boots `build/` in headless Chromium (`nixpkgs#chromium`,
+SwiftShader WebGL), loads the stars and the Milky Way, prints the console
+output and saves a screenshot. It passes when the console shows no
+`Error` lines. Look at the screenshot too: it must show a full star field
+and the Milky Way band.
 
 ## Make the sky data
 
@@ -77,13 +97,3 @@ serves `/engine/` and `/skydata/` with
 fetch a file again while its URL stays the same. If you replace a file
 at the same URL, visitors keep the old copy for up to a year. Put each
 new build at a new URL, or change the cache policy, before you deploy.
-
-## Known issue: use-after-free on downloads (not fixed yet)
-
-`src/utils/request_js.c` calls `emscripten_async_wget2_data(..., free=false, ...)`
-and its `onload` keeps the downloaded buffer (`req->data = data`). The
-Emscripten 4 glue ignores `free` and frees the buffer when `onload`
-returns. The engine then reads freed memory, so tiles arrive corrupted
-(`eph_load` errors at `eph-file.c` lines 112 and 122, "Cannot uncompress
-data") and most stars do not render. The fix is to copy the data in
-`onload`.

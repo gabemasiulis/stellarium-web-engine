@@ -1,0 +1,35 @@
+<!doctype html><meta charset="utf-8">
+<!-- Nocturne smoke test: boot build/ and load the stars + Milky Way.
+     Run through heimdall/smoke-test.sh. -->
+<style>html,body{margin:0;background:#000}canvas{width:100vw;height:100vh;display:block}</style>
+<canvas id="c"></canvas>
+<!-- /hold answers after 16 s: it keeps the load event (and so the headless
+     screenshot) waiting until the tiles are in. -->
+<img src="/hold" alt="" style="display:none">
+<script>
+// Copy all console output to console.log so that headless Chromium logs it.
+for (const k of ['error', 'warn', 'info']) {
+  const f = console[k].bind(console);
+  console[k] = (...a) => { console.log('[' + k + ']', ...a); f(...a); };
+}
+</script>
+<script type="module">
+const mod = await import('./engine/stellarium-web-engine.js');
+mod.default({ wasmFile: 'engine/stellarium-web-engine.wasm', canvas: document.getElementById('c'),
+  onReady(s) {
+    const core = s.core, obs = s.observer;
+    // St Paul MN, local midnight at the summer solstice, looking north.
+    obs.latitude = 44.95 * Math.PI / 180; obs.longitude = -93.09 * Math.PI / 180;
+    obs.utc = s.date2MJD(Date.UTC(2026, 5, 21, 5, 0));
+    core.time_speed = 0;
+    for (const k of ['atmosphere', 'landscapes', 'constellations', 'planets', 'dsos',
+                     'cardinals', 'lines', 'dss', 'skycultures', 'satellites',
+                     'comets', 'minor_planets'])
+      { try { if (core[k]) core[k].visible = false; } catch (_) {} }
+    core.display_limit_mag = 6.0; core.bortle_index = 1;
+    obs.yaw = 0; obs.pitch = 50 * Math.PI / 180; core.fov = 100 * Math.PI / 180;
+    core.stars.addDataSource({ url: location.origin + '/skydata/stars' });
+    core.milkyway.addDataSource({ url: location.origin + '/skydata/surveys/milkyway' });
+    console.log('SMOKE: data sources added');
+  } });
+</script>
